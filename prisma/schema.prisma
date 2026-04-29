@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Carrier {
+  id     Int    @id @default(autoincrement())
+  name   String @unique
+  routes Route[]
+
+  @@map("carriers")
+}
+
+model Route {
+  id                   Int       @id @default(autoincrement())
+  originCity           String    @map("origin_city")
+  destinationCity      String    @map("destination_city")
+  distanceKm           Decimal   @map("distance_km") @db.Decimal(14, 4)
+  estimatedTimeHours Decimal   @map("estimated_time_hours") @db.Decimal(14, 4)
+  vehicleType          String    @map("vehicle_type")
+  carrierId            Int?      @map("carrier_id")
+  carrier              Carrier?  @relation(fields: [carrierId], references: [id])
+  costUsd              Decimal   @map("cost_usd") @db.Decimal(14, 4)
+  status               String
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  disabledAt           DateTime? @map("disabled_at") @db.Timestamptz(6)
+  isDeleted            Boolean   @default(false) @map("is_deleted")
+
+  // Step 8: indexes for list filters / dashboards
+  @@index([originCity], map: "idx_routes_origin")
+  @@index([destinationCity], map: "idx_routes_destination")
+  @@index([status], map: "idx_routes_status")
+  @@index([vehicleType], map: "idx_routes_vehicle")
+  @@index([carrierId], map: "idx_routes_carrier")
+  @@map("routes")
+}
