@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.routeIdParamSchema = exports.updateRouteBodySchema = exports.createRouteBodySchema = exports.exportRoutesQuerySchema = exports.listRoutesQuerySchema = exports.VEHICLE_TYPES = exports.ROUTE_STATUSES = void 0;
+exports.routeIdParamSchema = exports.updateRouteBodySchema = exports.createRouteBodySchema = exports.dashboardSummaryQuerySchema = exports.exportRoutesQuerySchema = exports.listRoutesQuerySchema = exports.VEHICLE_TYPES = exports.ROUTE_STATUSES = void 0;
 exports.normalizeVehicleType = normalizeVehicleType;
 exports.normalizeStatus = normalizeStatus;
 exports.parseCsvRow = parseCsvRow;
@@ -50,6 +50,31 @@ exports.exportRoutesQuerySchema = exports.listRoutesQuerySchema.omit({
     page: true,
     limit: true,
     cursor: true,
+});
+const MAX_DASHBOARD_WINDOW_DAYS = 365;
+exports.dashboardSummaryQuerySchema = zod_1.z
+    .object({
+    from: zod_1.z.coerce.date(),
+    to: zod_1.z.coerce.date(),
+})
+    .superRefine((value, ctx) => {
+    if (value.from > value.to) {
+        ctx.addIssue({
+            code: zod_1.z.ZodIssueCode.custom,
+            message: "`from` must be earlier than or equal to `to`",
+            path: ["from"],
+        });
+        return;
+    }
+    const windowMs = value.to.getTime() - value.from.getTime();
+    const maxWindowMs = MAX_DASHBOARD_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    if (windowMs > maxWindowMs) {
+        ctx.addIssue({
+            code: zod_1.z.ZodIssueCode.custom,
+            message: `Date range cannot exceed ${MAX_DASHBOARD_WINDOW_DAYS} days`,
+            path: ["to"],
+        });
+    }
 });
 const vehicleTypeField = zod_1.z
     .string()

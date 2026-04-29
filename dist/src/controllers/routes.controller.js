@@ -12,6 +12,19 @@ class RoutesController {
         this.routeService = routeService;
     }
     registerRoutes(app) {
+        app.get("/api/v1/dashboard/summary", { preHandler: readAccess }, async (request, reply) => {
+            try {
+                const query = routes_dto_1.dashboardSummaryQuerySchema.parse(request.query);
+                const result = await this.routeService.getDashboardSummary(query);
+                reply.status(200).send(result);
+            }
+            catch (error) {
+                if (error instanceof zod_1.ZodError) {
+                    throw new errors_1.ValidationError("Invalid query parameters", error.issues);
+                }
+                throw error;
+            }
+        });
         app.get("/api/v1/routes", { preHandler: readAccess }, async (request, reply) => {
             try {
                 const query = routes_dto_1.listRoutesQuerySchema.parse(request.query);

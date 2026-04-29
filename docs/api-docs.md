@@ -53,6 +53,42 @@ Base path: `/api/v1`
 }
 ```
 
+## Dashboard
+
+### GET `/api/v1/dashboard/summary`
+- Auth: Bearer token (`ADMIN` or `OPERATOR`)
+- Query:
+  - `from` (required, ISO8601)
+  - `to` (required, ISO8601)
+- Validation:
+  - `from <= to`
+  - max range: 365 days
+- Response `200`:
+
+```json
+{
+  "range": {
+    "from": "2024-01-01T00:00:00.000Z",
+    "to": "2024-01-31T23:59:59.000Z"
+  },
+  "totalsByStatus": [
+    { "status": "ACTIVA", "count": 1 },
+    { "status": "SUSPENDIDA", "count": 1 }
+  ],
+  "topExpensiveRoutes": [
+    {
+      "id": 310,
+      "originCity": "Barranquilla",
+      "destinationCity": "Cartagena",
+      "costUsd": 300
+    }
+  ],
+  "activeHeatmapByRegion": [
+    { "region": "Andina", "count": 1 }
+  ]
+}
+```
+
 ## Routes
 
 ### GET `/api/v1/routes`

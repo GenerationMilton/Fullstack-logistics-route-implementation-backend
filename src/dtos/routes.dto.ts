@@ -57,6 +57,35 @@ export const exportRoutesQuerySchema = listRoutesQuerySchema.omit({
 
 export type ExportRoutesQueryDto = z.infer<typeof exportRoutesQuerySchema>;
 
+const MAX_DASHBOARD_WINDOW_DAYS = 365;
+
+export const dashboardSummaryQuerySchema = z
+  .object({
+    from: z.coerce.date(),
+    to: z.coerce.date(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.from > value.to) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "`from` must be earlier than or equal to `to`",
+        path: ["from"],
+      });
+      return;
+    }
+    const windowMs = value.to.getTime() - value.from.getTime();
+    const maxWindowMs = MAX_DASHBOARD_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    if (windowMs > maxWindowMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Date range cannot exceed ${MAX_DASHBOARD_WINDOW_DAYS} days`,
+        path: ["to"],
+      });
+    }
+  });
+
+export type DashboardSummaryQueryDto = z.infer<typeof dashboardSummaryQuerySchema>;
+
 const vehicleTypeField = z
   .string()
   .min(1)

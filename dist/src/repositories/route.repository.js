@@ -43,6 +43,61 @@ function buildRouteFilterWhere(query) {
 }
 const routeInclude = { carrier: true };
 class RouteRepository {
+    async getTotalsByStatus(from, to) {
+        const rows = await prisma_1.prisma.route.groupBy({
+            by: ["status"],
+            where: {
+                isDeleted: false,
+                createdAt: {
+                    gte: from,
+                    lte: to,
+                },
+            },
+            _count: {
+                _all: true,
+            },
+        });
+        return rows.map((row) => ({
+            status: row.status,
+            count: row._count._all,
+        }));
+    }
+    async getTopExpensiveRoutes(from, to, limit = 5) {
+        return prisma_1.prisma.route.findMany({
+            where: {
+                isDeleted: false,
+                createdAt: {
+                    gte: from,
+                    lte: to,
+                },
+            },
+            select: {
+                id: true,
+                originCity: true,
+                destinationCity: true,
+                costUsd: true,
+            },
+            orderBy: {
+                costUsd: "desc",
+            },
+            take: limit,
+        });
+    }
+    async getActiveRouteCities(from, to) {
+        return prisma_1.prisma.route.findMany({
+            where: {
+                isDeleted: false,
+                status: "ACTIVA",
+                createdAt: {
+                    gte: from,
+                    lte: to,
+                },
+            },
+            select: {
+                originCity: true,
+            },
+        });
+    }
     async list(query) {
         const filterWhere = buildRouteFilterWhere(query);
         const total = await prisma_1.prisma.route.count({ where: filterWhere });

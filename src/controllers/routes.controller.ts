@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import {
   createRouteBodySchema,
+  dashboardSummaryQuerySchema,
   exportRoutesQuerySchema,
   listRoutesQuerySchema,
   routeIdParamSchema,
@@ -18,6 +19,23 @@ export class RoutesController {
   constructor(private readonly routeService: RouteService) {}
 
   public registerRoutes(app: FastifyInstance): void {
+    app.get(
+      "/api/v1/dashboard/summary",
+      { preHandler: readAccess },
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+          const query = dashboardSummaryQuerySchema.parse(request.query);
+          const result = await this.routeService.getDashboardSummary(query);
+          reply.status(200).send(result);
+        } catch (error) {
+          if (error instanceof ZodError) {
+            throw new ValidationError("Invalid query parameters", error.issues);
+          }
+          throw error;
+        }
+      },
+    );
+
     app.get(
       "/api/v1/routes",
       { preHandler: readAccess },

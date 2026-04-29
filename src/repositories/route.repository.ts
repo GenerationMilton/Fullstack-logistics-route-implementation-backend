@@ -59,7 +59,91 @@ export type RouteWithCarrier = Prisma.RouteGetPayload<{
   include: typeof routeInclude;
 }>;
 
+export type DashboardStatusCountRow = {
+  status: string;
+  count: number;
+};
+
+export type DashboardExpensiveRouteRow = {
+  id: number;
+  originCity: string;
+  destinationCity: string;
+  costUsd: Prisma.Decimal;
+};
+
+export type DashboardActiveCityRow = {
+  originCity: string;
+};
+
 export class RouteRepository {
+  public async getTotalsByStatus(
+    from: Date,
+    to: Date,
+  ): Promise<DashboardStatusCountRow[]> {
+    const rows = await prisma.route.groupBy({
+      by: ["status"],
+      where: {
+        isDeleted: false,
+        createdAt: {
+          gte: from,
+          lte: to,
+        },
+      },
+      _count: {
+        _all: true,
+      },
+    });
+    return rows.map((row) => ({
+      status: row.status,
+      count: row._count._all,
+    }));
+  }
+
+  public async getTopExpensiveRoutes(
+    from: Date,
+    to: Date,
+    limit = 5,
+  ): Promise<DashboardExpensiveRouteRow[]> {
+    return prisma.route.findMany({
+      where: {
+        isDeleted: false,
+        createdAt: {
+          gte: from,
+          lte: to,
+        },
+      },
+      select: {
+        id: true,
+        originCity: true,
+        destinationCity: true,
+        costUsd: true,
+      },
+      orderBy: {
+        costUsd: "desc",
+      },
+      take: limit,
+    });
+  }
+
+  public async getActiveRouteCities(
+    from: Date,
+    to: Date,
+  ): Promise<DashboardActiveCityRow[]> {
+    return prisma.route.findMany({
+      where: {
+        isDeleted: false,
+        status: "ACTIVA",
+        createdAt: {
+          gte: from,
+          lte: to,
+        },
+      },
+      select: {
+        originCity: true,
+      },
+    });
+  }
+
   public async list(query: ListRoutesQueryDto): Promise<{
     data: RouteWithCarrier[];
     total: number;

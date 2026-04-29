@@ -66,6 +66,66 @@ describeIntegration("HTTP API (integration)", () => {
     expect(Array.isArray(body.data)).toBe(true);
   });
 
+  it("GET /api/v1/dashboard/summary returns aggregated payload", async () => {
+    const carrier = await prisma.carrier.create({
+      data: { name: "DashCarrier" },
+    });
+    await prisma.route.createMany({
+      data: [
+        {
+          originCity: "Bogotá",
+          destinationCity: "Medellín",
+          distanceKm: 10,
+          estimatedTimeHours: 1,
+          vehicleType: "CAMION",
+          carrierId: carrier.id,
+          costUsd: 100,
+          status: "ACTIVA",
+          createdAt: new Date("2024-01-05T00:00:00.000Z"),
+          isDeleted: false,
+        },
+        {
+          originCity: "Barranquilla",
+          destinationCity: "Cartagena",
+          distanceKm: 15,
+          estimatedTimeHours: 2,
+          vehicleType: "CAMION",
+          carrierId: carrier.id,
+          costUsd: 300,
+          status: "SUSPENDIDA",
+          createdAt: new Date("2024-01-10T00:00:00.000Z"),
+          isDeleted: false,
+        },
+      ],
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/dashboard/summary?from=2024-01-01T00:00:00.000Z&to=2024-01-31T23:59:59.000Z",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as {
+      range: { from: string; to: string };
+      totalsByStatus: Array<{ status: string; count: number }>;
+      topExpensiveRoutes: Array<{ id: number; costUsd: number }>;
+      activeHeatmapByRegion: Array<{ region: string; count: number }>;
+    };
+    expect(body.range.from).toBe("2024-01-01T00:00:00.000Z");
+    expect(body.totalsByStatus.some((s) => s.status === "ACTIVA")).toBe(true);
+    expect(body.topExpensiveRoutes[0]?.costUsd).toBe(300);
+    expect(body.activeHeatmapByRegion.length).toBeGreaterThan(0);
+  });
+
+  it("GET /api/v1/dashboard/summary returns 400 on invalid range", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/dashboard/summary?from=2024-02-01T00:00:00.000Z&to=2024-01-01T00:00:00.000Z",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it("POST /api/v1/routes then GET by id and PATCH disable", async () => {
     const create = await app.inject({
       method: "POST",

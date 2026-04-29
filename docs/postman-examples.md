@@ -32,6 +32,12 @@ pm.environment.set("token", json.token);
 - URL: `{{baseUrl}}/api/v1/routes?limit=20&page=1`
 - Header: `Authorization: Bearer {{token}}`
 
+## 2.1) Dashboard summary
+
+- Method: `GET`
+- URL: `{{baseUrl}}/api/v1/dashboard/summary?from=2024-01-01T00:00:00.000Z&to=2024-01-31T23:59:59.000Z`
+- Header: `Authorization: Bearer {{token}}`
+
 ## 3) Create route (ADMIN)
 
 - Method: `POST`

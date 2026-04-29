@@ -2,9 +2,11 @@ import { Prisma } from "@prisma/client";
 import { parse } from "csv-parse";
 import type { Readable } from "node:stream";
 import type { TrackingAdapter } from "../adapters/tracking.adapter";
+import { resolveRegion } from "../config/dashboard-regions";
 import { prisma } from "../db/prisma";
 import type {
   CreateRouteBodyDto,
+  DashboardSummaryQueryDto,
   ExportRoutesQueryDto,
   ListRoutesQueryDto,
   UpdateRouteBodyDto,
@@ -150,6 +152,40 @@ export class RouteService {
       }),
     );
     return { routes };
+  }
+
+  public async getDashboardSummary(query: DashboardSummaryQueryDto) {
+    const [totalsByStatus, topExpensiveRoutes, activeCities] = await Promise.all([
+      this.routeRepository.getTotalsByStatus(query.from, query.to),
+      this.routeRepository.getTopExpensiveRoutes(query.from, query.to, 5),
+      this.routeRepository.getActiveRouteCities(query.from, query.to),
+    ]);
+
+    const regionCounts = new Map<string, number>();
+    for (const row of activeCities) {
+      const region = resolveRegion(row.originCity);
+      regionCounts.set(region, (regionCounts.get(region) ?? 0) + 1);
+    }
+
+    return {
+      range: {
+        from: query.from.toISOString(),
+        to: query.to.toISOString(),
+      },
+      totalsByStatus,
+      topExpensiveRoutes: topExpensiveRoutes.map((route) => ({
+        id: route.id,
+        originCity: route.originCity,
+        destinationCity: route.destinationCity,
+        costUsd: Number(route.costUsd),
+      })),
+      activeHeatmapByRegion: Array.from(regionCounts.entries()).map(
+        ([region, count]) => ({
+          region,
+          count,
+        }),
+      ),
+    };
   }
 
   public async exportRoutesCsv(query: ExportRoutesQueryDto): Promise<string> {

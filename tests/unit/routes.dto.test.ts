@@ -1,5 +1,6 @@
 import {
   createRouteBodySchema,
+  dashboardSummaryQuerySchema,
   listRoutesQuerySchema,
   normalizeStatus,
   normalizeVehicleType,
@@ -89,5 +90,23 @@ describe("parseCsvRow", () => {
       expect(result.data.vehicle_type).toBe("CAMION");
       expect(result.data.created_at).toBeInstanceOf(Date);
     }
+  });
+});
+
+describe("dashboardSummaryQuerySchema", () => {
+  it("accepts valid range", () => {
+    const result = dashboardSummaryQuerySchema.safeParse({
+      from: "2024-01-01T00:00:00.000Z",
+      to: "2024-01-31T23:59:59.000Z",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when from is later than to", () => {
+    const result = dashboardSummaryQuerySchema.safeParse({
+      from: "2024-02-01T00:00:00.000Z",
+      to: "2024-01-01T00:00:00.000Z",
+    });
+    expect(result.success).toBe(false);
   });
 });

@@ -144,6 +144,41 @@
           "response": []
         },
         {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/dashboard/summary?from=2024-01-01T00:00:00.000Z&to=2024-01-31T23:59:59.000Z",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2024-01-01T00:00:00.000Z"
+                },
+                {
+                  "key": "to",
+                  "value": "2024-01-31T23:59:59.000Z"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Create Route (ADMIN)",
           "event": [
             {

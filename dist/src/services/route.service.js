@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RouteService = void 0;
 const client_1 = require("@prisma/client");
 const csv_parse_1 = require("csv-parse");
+const dashboard_regions_1 = require("../config/dashboard-regions");
 const prisma_1 = require("../db/prisma");
 const routes_dto_1 = require("../dtos/routes.dto");
 const errors_1 = require("../utils/errors");
@@ -127,6 +128,35 @@ class RouteService {
             };
         }));
         return { routes };
+    }
+    async getDashboardSummary(query) {
+        const [totalsByStatus, topExpensiveRoutes, activeCities] = await Promise.all([
+            this.routeRepository.getTotalsByStatus(query.from, query.to),
+            this.routeRepository.getTopExpensiveRoutes(query.from, query.to, 5),
+            this.routeRepository.getActiveRouteCities(query.from, query.to),
+        ]);
+        const regionCounts = new Map();
+        for (const row of activeCities) {
+            const region = (0, dashboard_regions_1.resolveRegion)(row.originCity);
+            regionCounts.set(region, (regionCounts.get(region) ?? 0) + 1);
+        }
+        return {
+            range: {
+                from: query.from.toISOString(),
+                to: query.to.toISOString(),
+            },
+            totalsByStatus,
+            topExpensiveRoutes: topExpensiveRoutes.map((route) => ({
+                id: route.id,
+                originCity: route.originCity,
+                destinationCity: route.destinationCity,
+                costUsd: Number(route.costUsd),
+            })),
+            activeHeatmapByRegion: Array.from(regionCounts.entries()).map(([region, count]) => ({
+                region,
+                count,
+            })),
+        };
     }
     async exportRoutesCsv(query) {
         const rows = await this.routeRepository.findManyForExport(query, EXPORT_MAX_ROWS);
