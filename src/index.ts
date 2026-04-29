@@ -7,6 +7,7 @@ import { registerCorrelationIdMiddleware } from "./middlewares/correlation-id.mi
 import { registerErrorHandler } from "./middlewares/error-handler.middleware";
 import { HealthRepository } from "./repositories/health.repository";
 import { UserRepository } from "./repositories/user.repository";
+import { registerSecurityPlugins } from "./security/register-security-plugins";
 import { AuthService } from "./services/auth.service";
 import { HealthService } from "./services/health.service";
 import { env } from "./utils/env";
@@ -19,17 +20,6 @@ const app = Fastify({
 registerCorrelationIdMiddleware(app);
 registerErrorHandler(app);
 
-void app.register(fastifyJwt, {
-  secret: env.JWT_SECRET,
-  sign: {
-    expiresIn: env.JWT_EXPIRES_IN,
-  },
-});
-
-void app.register(fastifyRateLimit, {
-  global: false,
-});
-
 const healthRepository = new HealthRepository();
 const healthService = new HealthService(healthRepository);
 const healthController = new HealthController(healthService);
@@ -37,14 +27,27 @@ const userRepository = new UserRepository();
 const authService = new AuthService(userRepository, app);
 const authController = new AuthController(authService);
 
-healthController.registerRoutes(app);
-authController.registerRoutes(app);
-
 const port = env.PORT;
 const host = env.HOST;
 
 async function start(): Promise<void> {
   try {
+    await registerSecurityPlugins(app);
+
+    await app.register(fastifyJwt, {
+      secret: env.JWT_SECRET,
+      sign: {
+        expiresIn: env.JWT_EXPIRES_IN,
+      },
+    });
+
+    await app.register(fastifyRateLimit, {
+      global: false,
+    });
+
+    healthController.registerRoutes(app);
+    authController.registerRoutes(app);
+
     await userRepository.bootstrapAdmin();
     await app.listen({ port, host });
     app.log.info(`Server running at http://${host}:${port}`);
