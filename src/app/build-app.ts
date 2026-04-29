@@ -1,7 +1,10 @@
 import fastifyJwt from "@fastify/jwt";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyRateLimit from "@fastify/rate-limit";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyServerOptions,
+} from "fastify";
 import { createTrackingAdapter } from "../adapters/create-tracking-adapter";
 import { AuthController } from "../controllers/auth.controller";
 import { HealthController } from "../controllers/health.controller";
@@ -27,9 +30,11 @@ export async function buildApp(options?: {
   /** Pass `false` to silence logs in tests. */
   logger?: boolean;
 }): Promise<BuiltApp> {
-  const app = Fastify({
-    logger: options?.logger === false ? false : logger,
-  });
+  const appOptions: FastifyServerOptions =
+    options?.logger === false
+      ? { logger: false }
+      : { loggerInstance: logger };
+  const app = Fastify(appOptions);
 
   registerCorrelationIdMiddleware(app);
   registerErrorHandler(app);
