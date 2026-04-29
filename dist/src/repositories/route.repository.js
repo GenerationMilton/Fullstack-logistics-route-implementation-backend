@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RouteRepository = void 0;
+exports.buildRouteFilterWhere = buildRouteFilterWhere;
 const prisma_1 = require("../db/prisma");
 const routes_dto_1 = require("../dtos/routes.dto");
 const SORT_FIELD_MAP = {
@@ -13,7 +14,7 @@ const SORT_FIELD_MAP = {
     status: "status",
     created_at: "createdAt",
 };
-function buildWhereFromListQuery(query) {
+function buildRouteFilterWhere(query) {
     const where = {
         isDeleted: false,
     };
@@ -43,27 +44,44 @@ function buildWhereFromListQuery(query) {
 const routeInclude = { carrier: true };
 class RouteRepository {
     async list(query) {
-        const where = buildWhereFromListQuery(query);
+        const filterWhere = buildRouteFilterWhere(query);
+        const total = await prisma_1.prisma.route.count({ where: filterWhere });
+        if (query.cursor != null) {
+            const where = {
+                ...filterWhere,
+                id: { gt: query.cursor },
+            };
+            const take = query.limit + 1;
+            const rows = await prisma_1.prisma.route.findMany({
+                where,
+                take,
+                orderBy: { id: "asc" },
+                include: routeInclude,
+            });
+            const hasMore = rows.length > query.limit;
+            const data = hasMore ? rows.slice(0, query.limit) : rows;
+            const nextCursor = data.length > 0 ? data[data.length - 1]?.id ?? null : null;
+            return { data, total, nextCursor, hasMore };
+        }
         const skip = (query.page - 1) * query.limit;
         const take = query.limit;
         const prismaField = SORT_FIELD_MAP[query.sort_by];
         const orderBy = {
             [prismaField]: query.sort_order,
         };
-        const [data, total] = await prisma_1.prisma.$transaction([
-            prisma_1.prisma.route.findMany({
-                where,
-                skip,
-                take,
-                orderBy,
-                include: routeInclude,
-            }),
-            prisma_1.prisma.route.count({ where }),
-        ]);
-        return { data, total };
+        const data = await prisma_1.prisma.route.findMany({
+            where: filterWhere,
+            skip,
+            take,
+            orderBy,
+            include: routeInclude,
+        });
+        const hasMore = skip + data.length < total;
+        const nextCursor = hasMore && data.length > 0 ? data[data.length - 1]?.id ?? null : null;
+        return { data, total, nextCursor, hasMore };
     }
     async findManyForExport(query, maxRows) {
-        const where = buildWhereFromListQuery(query);
+        const where = buildRouteFilterWhere(query);
         const prismaField = SORT_FIELD_MAP[query.sort_by];
         const orderBy = {
             [prismaField]: query.sort_order,

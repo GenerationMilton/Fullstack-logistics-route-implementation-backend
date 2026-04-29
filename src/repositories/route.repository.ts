@@ -17,7 +17,7 @@ const SORT_FIELD_MAP: Record<
   created_at: "createdAt",
 };
 
-function buildWhereFromListQuery(
+export function buildRouteFilterWhere(
   query: ListRoutesQueryDto | ExportRoutesQueryDto,
 ): Prisma.RouteWhereInput {
   const where: Prisma.RouteWhereInput = {
@@ -60,10 +60,34 @@ export type RouteWithCarrier = Prisma.RouteGetPayload<{
 }>;
 
 export class RouteRepository {
-  public async list(
-    query: ListRoutesQueryDto,
-  ): Promise<{ data: RouteWithCarrier[]; total: number }> {
-    const where = buildWhereFromListQuery(query);
+  public async list(query: ListRoutesQueryDto): Promise<{
+    data: RouteWithCarrier[];
+    total: number;
+    nextCursor: number | null;
+    hasMore: boolean;
+  }> {
+    const filterWhere = buildRouteFilterWhere(query);
+    const total = await prisma.route.count({ where: filterWhere });
+
+    if (query.cursor != null) {
+      const where: Prisma.RouteWhereInput = {
+        ...filterWhere,
+        id: { gt: query.cursor },
+      };
+      const take = query.limit + 1;
+      const rows = await prisma.route.findMany({
+        where,
+        take,
+        orderBy: { id: "asc" },
+        include: routeInclude,
+      });
+      const hasMore = rows.length > query.limit;
+      const data = hasMore ? rows.slice(0, query.limit) : rows;
+      const nextCursor =
+        data.length > 0 ? data[data.length - 1]?.id ?? null : null;
+      return { data, total, nextCursor, hasMore };
+    }
+
     const skip = (query.page - 1) * query.limit;
     const take = query.limit;
     const prismaField = SORT_FIELD_MAP[query.sort_by];
@@ -71,25 +95,26 @@ export class RouteRepository {
       [prismaField]: query.sort_order,
     };
 
-    const [data, total] = await prisma.$transaction([
-      prisma.route.findMany({
-        where,
-        skip,
-        take,
-        orderBy,
-        include: routeInclude,
-      }),
-      prisma.route.count({ where }),
-    ]);
+    const data = await prisma.route.findMany({
+      where: filterWhere,
+      skip,
+      take,
+      orderBy,
+      include: routeInclude,
+    });
 
-    return { data, total };
+    const hasMore = skip + data.length < total;
+    const nextCursor =
+      hasMore && data.length > 0 ? data[data.length - 1]?.id ?? null : null;
+
+    return { data, total, nextCursor, hasMore };
   }
 
   public async findManyForExport(
     query: ExportRoutesQueryDto,
     maxRows: number,
   ): Promise<RouteWithCarrier[]> {
-    const where = buildWhereFromListQuery(query);
+    const where = buildRouteFilterWhere(query);
     const prismaField = SORT_FIELD_MAP[query.sort_by];
     const orderBy: Prisma.RouteOrderByWithRelationInput = {
       [prismaField]: query.sort_order,

@@ -36,6 +36,8 @@ const sortBySchema = zod_1.z.enum([
 exports.listRoutesQuerySchema = zod_1.z.object({
     page: zod_1.z.coerce.number().int().min(1).default(1),
     limit: zod_1.z.coerce.number().int().min(1).max(100).default(20),
+    /** When set, returns the next page using stable `id ASC` order (offset fields are ignored). */
+    cursor: zod_1.z.coerce.number().int().positive().optional(),
     origin_city: zod_1.z.string().optional(),
     destination_city: zod_1.z.string().optional(),
     vehicle_type: zod_1.z.string().optional(),
@@ -47,6 +49,7 @@ exports.listRoutesQuerySchema = zod_1.z.object({
 exports.exportRoutesQuerySchema = exports.listRoutesQuerySchema.omit({
     page: true,
     limit: true,
+    cursor: true,
 });
 const vehicleTypeField = zod_1.z
     .string()

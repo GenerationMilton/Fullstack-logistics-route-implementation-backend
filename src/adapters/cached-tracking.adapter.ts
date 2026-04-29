@@ -1,6 +1,7 @@
 import NodeCache from "node-cache";
 import type { TrackResponse, TrackingAdapter } from "./tracking.adapter";
 
+/** Step 8: SOAP (and downstream) tracking responses cached for 60 seconds. */
 const CACHE_KEY_PREFIX = "track";
 
 export class CachedTrackingAdapter implements TrackingAdapter {

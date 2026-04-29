@@ -36,6 +36,8 @@ const sortBySchema = z.enum([
 export const listRoutesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  /** When set, returns the next page using stable `id ASC` order (offset fields are ignored). */
+  cursor: z.coerce.number().int().positive().optional(),
   origin_city: z.string().optional(),
   destination_city: z.string().optional(),
   vehicle_type: z.string().optional(),
@@ -50,6 +52,7 @@ export type ListRoutesQueryDto = z.infer<typeof listRoutesQuerySchema>;
 export const exportRoutesQuerySchema = listRoutesQuerySchema.omit({
   page: true,
   limit: true,
+  cursor: true,
 });
 
 export type ExportRoutesQueryDto = z.infer<typeof exportRoutesQuerySchema>;

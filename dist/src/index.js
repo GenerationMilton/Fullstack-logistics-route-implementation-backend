@@ -1,73 +1,19 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
-const jwt_1 = __importDefault(require("@fastify/jwt"));
-const multipart_1 = __importDefault(require("@fastify/multipart"));
-const rate_limit_1 = __importDefault(require("@fastify/rate-limit"));
-const fastify_1 = __importDefault(require("fastify"));
-const create_tracking_adapter_1 = require("./adapters/create-tracking-adapter");
-const auth_controller_1 = require("./controllers/auth.controller");
-const health_controller_1 = require("./controllers/health.controller");
-const routes_controller_1 = require("./controllers/routes.controller");
+const build_app_1 = require("./app/build-app");
 const prisma_1 = require("./db/prisma");
-const correlation_id_middleware_1 = require("./middlewares/correlation-id.middleware");
-const error_handler_middleware_1 = require("./middlewares/error-handler.middleware");
-const health_repository_1 = require("./repositories/health.repository");
-const route_repository_1 = require("./repositories/route.repository");
-const user_repository_1 = require("./repositories/user.repository");
-const register_security_plugins_1 = require("./security/register-security-plugins");
-const auth_service_1 = require("./services/auth.service");
-const health_service_1 = require("./services/health.service");
-const route_service_1 = require("./services/route.service");
 const env_1 = require("./utils/env");
-const logger_1 = require("./utils/logger");
-const app = (0, fastify_1.default)({
-    logger: logger_1.logger,
-});
-(0, correlation_id_middleware_1.registerCorrelationIdMiddleware)(app);
-(0, error_handler_middleware_1.registerErrorHandler)(app);
-const healthRepository = new health_repository_1.HealthRepository();
-const healthService = new health_service_1.HealthService(healthRepository);
-const healthController = new health_controller_1.HealthController(healthService);
-const userRepository = new user_repository_1.UserRepository();
-const authService = new auth_service_1.AuthService(userRepository, app);
-const authController = new auth_controller_1.AuthController(authService);
-const routeRepository = new route_repository_1.RouteRepository();
-const trackingAdapter = (0, create_tracking_adapter_1.createTrackingAdapter)();
-const routeService = new route_service_1.RouteService(routeRepository, trackingAdapter);
-const routesController = new routes_controller_1.RoutesController(routeService);
-const port = env_1.env.PORT;
-const host = env_1.env.HOST;
 async function start() {
     try {
-        await (0, register_security_plugins_1.registerSecurityPlugins)(app);
-        await app.register(jwt_1.default, {
-            secret: env_1.env.JWT_SECRET,
-            sign: {
-                expiresIn: env_1.env.JWT_EXPIRES_IN,
-            },
-        });
-        await app.register(rate_limit_1.default, {
-            global: false,
-        });
-        await app.register(multipart_1.default, {
-            limits: {
-                fileSize: 10 * 1024 * 1024,
-            },
-        });
+        const { app, userRepository } = await (0, build_app_1.buildApp)();
         await prisma_1.prisma.$connect();
-        healthController.registerRoutes(app);
-        authController.registerRoutes(app);
-        routesController.registerRoutes(app);
         await userRepository.bootstrapAdmin();
-        await app.listen({ port, host });
-        app.log.info(`Server running at http://${host}:${port}`);
+        await app.listen({ port: env_1.env.PORT, host: env_1.env.HOST });
+        app.log.info(`Server running at http://${env_1.env.HOST}:${env_1.env.PORT}`);
     }
     catch (error) {
-        app.log.error(error);
+        console.error(error);
         process.exit(1);
     }
 }

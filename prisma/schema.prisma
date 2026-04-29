@@ -30,6 +30,7 @@ model Route {
   disabledAt           DateTime? @map("disabled_at") @db.Timestamptz(6)
   isDeleted            Boolean   @default(false) @map("is_deleted")
 
+  // Step 8: indexes for list filters / dashboards
   @@index([originCity], map: "idx_routes_origin")
   @@index([destinationCity], map: "idx_routes_destination")
   @@index([status], map: "idx_routes_status")

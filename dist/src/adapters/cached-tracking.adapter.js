@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CachedTrackingAdapter = void 0;
 const node_cache_1 = __importDefault(require("node-cache"));
+/** Step 8: SOAP (and downstream) tracking responses cached for 60 seconds. */
 const CACHE_KEY_PREFIX = "track";
 class CachedTrackingAdapter {
     constructor(inner, ttlSeconds) {

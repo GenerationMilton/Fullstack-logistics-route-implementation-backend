@@ -62,13 +62,19 @@ export class RouteService {
   ) {}
 
   public async listRoutes(query: ListRoutesQueryDto) {
-    const { data, total } = await this.routeRepository.list(query);
-    return {
+    const { data, total, nextCursor, hasMore } =
+      await this.routeRepository.list(query);
+    const payload = {
       total,
-      page: query.page,
       limit: query.limit,
       data: data.map(serializeRoute),
+      nextCursor,
+      hasMore,
     };
+    if (query.cursor != null) {
+      return { ...payload, page: null };
+    }
+    return { ...payload, page: query.page };
   }
 
   public async getRouteById(id: number) {
