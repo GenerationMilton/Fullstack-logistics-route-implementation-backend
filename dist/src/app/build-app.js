@@ -24,9 +24,10 @@ const route_service_1 = require("../services/route.service");
 const env_1 = require("../utils/env");
 const logger_1 = require("../utils/logger");
 async function buildApp(options) {
-    const app = (0, fastify_1.default)({
-        logger: options?.logger === false ? false : logger_1.logger,
-    });
+    const appOptions = options?.logger === false
+        ? { logger: false }
+        : { loggerInstance: logger_1.logger };
+    const app = (0, fastify_1.default)(appOptions);
     (0, correlation_id_middleware_1.registerCorrelationIdMiddleware)(app);
     (0, error_handler_middleware_1.registerErrorHandler)(app);
     await (0, register_security_plugins_1.registerSecurityPlugins)(app);

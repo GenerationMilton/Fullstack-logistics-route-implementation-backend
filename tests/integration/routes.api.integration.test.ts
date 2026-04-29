@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { PrismaClient } from "@prisma/client";
+import { prisma as prismaClient } from "../../src/db/prisma";
+import { buildApp } from "../../src/app/build-app";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 const describeIntegration = hasDatabase ? describe : describe.skip;
@@ -24,9 +26,7 @@ describeIntegration("HTTP API (integration)", () => {
   let prisma: PrismaClient;
 
   beforeAll(async () => {
-    const prismaMod = await import("../../src/db/prisma");
-    prisma = prismaMod.prisma;
-    const { buildApp } = await import("../../src/app/build-app");
+    prisma = prismaClient;
     await prisma.$connect();
     const built = await buildApp({ logger: false });
     app = built.app;
