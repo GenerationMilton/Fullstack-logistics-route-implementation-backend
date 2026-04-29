@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { parse } from "csv-parse/sync";
+import { parse } from "csv-parse";
+import type { Readable } from "node:stream";
 import type { TrackingAdapter } from "../adapters/tracking.adapter";
 import { prisma } from "../db/prisma";
 import type {
@@ -169,56 +170,75 @@ export class RouteService {
     return [header, ...lines].join("\n");
   }
 
-  public async importRoutesFromCsvBuffer(buffer: Buffer): Promise<{
+  public async importRoutesFromCsvStream(stream: Readable): Promise<{
     totalRows: number;
     imported: number;
     failed: number;
     errors: { row: number; errors: string[] }[];
   }> {
-    const text = buffer.toString("utf8");
-    const records = parse(text, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-    }) as Record<string, string>[];
+    const parser = stream.pipe(
+      parse({
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        bom: true,
+      }),
+    );
 
     const errors: { row: number; errors: string[] }[] = [];
-    const validRows: Prisma.RouteUncheckedCreateInput[] = [];
+    const batch: Prisma.RouteUncheckedCreateInput[] = [];
+    let lineNo = 1;
+    let imported = 0;
 
-    for (let index = 0; index < records.length; index += 1) {
-      const rowNumber = index + 2;
-      const parsed = parseCsvRow(records[index] as Record<string, unknown>);
-      if (!parsed.success) {
-        errors.push({ row: rowNumber, errors: parsed.errors });
-        continue;
+    try {
+      for await (const record of parser) {
+        lineNo += 1;
+        const parsed = parseCsvRow(record as Record<string, unknown>);
+        if (!parsed.success) {
+          errors.push({ row: lineNo, errors: parsed.errors });
+          continue;
+        }
+
+        const row = parsed.data;
+        const carrier = await this.routeRepository.upsertCarrierByName(
+          row.carrier,
+        );
+
+        batch.push({
+          originCity: row.origin_city,
+          destinationCity: row.destination_city,
+          distanceKm: row.distance_km,
+          estimatedTimeHours: row.estimated_time_hours,
+          vehicleType: row.vehicle_type,
+          carrierId: carrier.id,
+          costUsd: row.cost_usd,
+          status: row.status,
+          createdAt: row.created_at,
+          isDeleted: false,
+        });
+
+        if (batch.length >= IMPORT_BATCH_SIZE) {
+          const toFlush = batch.splice(0, IMPORT_BATCH_SIZE);
+          await this.routeRepository.createManyInTransaction(toFlush);
+          imported += toFlush.length;
+        }
       }
-
-      const row = parsed.data;
-      const carrier = await this.routeRepository.upsertCarrierByName(row.carrier);
-
-      validRows.push({
-        originCity: row.origin_city,
-        destinationCity: row.destination_city,
-        distanceKm: row.distance_km,
-        estimatedTimeHours: row.estimated_time_hours,
-        vehicleType: row.vehicle_type,
-        carrierId: carrier.id,
-        costUsd: row.cost_usd,
-        status: row.status,
-        createdAt: row.created_at,
-        isDeleted: false,
-      });
+    } catch (error) {
+      throw new AppError(
+        `CSV import failed: ${error instanceof Error ? error.message : String(error)}`,
+        400,
+      );
     }
 
-    let imported = 0;
-    for (let i = 0; i < validRows.length; i += IMPORT_BATCH_SIZE) {
-      const batch = validRows.slice(i, i + IMPORT_BATCH_SIZE);
+    if (batch.length > 0) {
       await this.routeRepository.createManyInTransaction(batch);
       imported += batch.length;
     }
 
+    const totalRows = Math.max(0, lineNo - 1);
+
     return {
-      totalRows: records.length,
+      totalRows,
       imported,
       failed: errors.length,
       errors,

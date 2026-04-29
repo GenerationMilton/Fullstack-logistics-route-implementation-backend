@@ -76,8 +76,7 @@ export class RoutesController {
         if (!file) {
           throw new ValidationError("CSV file is required (multipart field: file)");
         }
-        const buffer = await file.toBuffer();
-        const result = await this.routeService.importRoutesFromCsvBuffer(buffer);
+        const result = await this.routeService.importRoutesFromCsvStream(file.file);
         reply.status(200).send(result);
       },
     );

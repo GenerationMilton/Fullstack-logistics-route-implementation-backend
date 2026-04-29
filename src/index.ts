@@ -3,7 +3,7 @@ import fastifyJwt from "@fastify/jwt";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyRateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
-import { MockTrackingAdapter } from "./adapters/mock-tracking.adapter";
+import { createTrackingAdapter } from "./adapters/create-tracking-adapter";
 import { AuthController } from "./controllers/auth.controller";
 import { HealthController } from "./controllers/health.controller";
 import { RoutesController } from "./controllers/routes.controller";
@@ -35,7 +35,7 @@ const authService = new AuthService(userRepository, app);
 const authController = new AuthController(authService);
 
 const routeRepository = new RouteRepository();
-const trackingAdapter = new MockTrackingAdapter();
+const trackingAdapter = createTrackingAdapter();
 const routeService = new RouteService(routeRepository, trackingAdapter);
 const routesController = new RoutesController(routeService);
 

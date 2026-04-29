@@ -164,8 +164,13 @@ export class RouteRepository {
   public async createManyInTransaction(
     rows: Prisma.RouteUncheckedCreateInput[],
   ): Promise<void> {
-    await prisma.$transaction(
-      rows.map((row) => prisma.route.create({ data: row })),
-    );
+    if (rows.length === 0) {
+      return;
+    }
+    await prisma.$transaction(async (tx) => {
+      for (const row of rows) {
+        await tx.route.create({ data: row });
+      }
+    });
   }
 }
