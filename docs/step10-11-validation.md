@@ -17,7 +17,7 @@ This report validates Step 10 (scripts/commands) and Step 11 (deliverables) from
 
 - Migration deploy: no pending migrations.
 - Dataset seed: success (`total: 100`, `inserted: 100`, `skipped: 0`).
-- Test suite: pass (`8/8` suites, `26/26` tests).
+- Test suite: pass (`8/8` suites, `30/30` tests).
 - Coverage: pass (global lines ~`73.82%`).
 - Build: pass (`tsc` successful).
 - Lint: pass (`npm run lint` mapped to `npm run typecheck`).
@@ -27,6 +27,7 @@ This report validates Step 10 (scripts/commands) and Step 11 (deliverables) from
 - `prisma migrate dev` is interactive and fails in non-interactive shells.  
   For validation/deploy workflows, use `prisma migrate deploy`.
 - Integration tests initially failed due dynamic import under Jest; fixed by static imports in `tests/integration/routes.api.integration.test.ts`.
+- Dashboard summary endpoint (`GET /api/v1/dashboard/summary`) was added with integration + DTO validation coverage.
 
 ## Step 11 - Deliverables status
 
@@ -37,6 +38,7 @@ This report validates Step 10 (scripts/commands) and Step 11 (deliverables) from
 - `data/routes_dataset.csv`
 - `tests/` with unit + integration coverage
 - TrackingAdapter implementations in `src/adapters/`
+- Root `README.md` with run and API testing instructions
 
 ### Added in docs folder
 
@@ -44,6 +46,7 @@ This report validates Step 10 (scripts/commands) and Step 11 (deliverables) from
 - `docs/api-docs.md`
 - `docs/postman-examples.md`
 - `docs/step10-11-validation.md`
+- `docs/backend.postman_collection.json`
 
 ## Live API sample verification
 
@@ -55,6 +58,7 @@ With server running on `http://localhost:3000`:
 - `GET /api/v1/routes/:id`: success
 - `PATCH /api/v1/routes/:id/disable`: success
 - `GET /api/v1/routes/active/track`: success
+- `GET /api/v1/dashboard/summary`: success
 
 Health check:
 

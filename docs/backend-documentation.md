@@ -8,6 +8,7 @@ Main capabilities:
 - JWT authentication with role-based authorization (`ADMIN`, `OPERATOR`).
 - Route CRUD with soft delete.
 - CSV bulk import for routes.
+- Dashboard summary endpoint with date-range aggregations.
 - Active routes tracking via `TrackingAdapter` abstraction (mock/SOAP) with cache.
 - Centralized error handling, CORS + Helmet security, and correlation-id per request.
 
@@ -204,6 +205,13 @@ Protected endpoints require `Authorization: Bearer <token>`.
 - `GET /api/v1/routes/active/track`
 - `GET /api/v1/routes/export` (CSV)
 
+### Dashboard
+- `GET /api/v1/dashboard/summary?from=<ISO>&to=<ISO>`
+  - Protected (`ADMIN` / `OPERATOR`)
+  - Validates `from <= to`
+  - Max date window: 365 days
+  - Returns `totalsByStatus`, `topExpensiveRoutes`, `activeHeatmapByRegion`
+
 ---
 
 ## 10) Tracking Adapter
@@ -233,6 +241,7 @@ Caching:
    - Token: `{{token}}`
 
 3. Recommended flow:
+   - `GET /api/v1/dashboard/summary?from=...&to=...`
    - `GET /api/v1/routes`
    - `POST /api/v1/routes` (ADMIN)
    - `GET /api/v1/routes/:id`
@@ -264,8 +273,8 @@ npm run test:cov
 ```
 
 Current status when this document was generated:
-- 7 test suites passed
-- 1 integration suite skipped in environments without DB setup
+- 8 test suites passed
+- 30 tests passed
 
 ---
 
@@ -303,6 +312,7 @@ Legend:
 - ✅ Endpoints required in Step 5 are implemented, including import, track, and export.
 - ✅ Pagination response includes `total`, `limit`, `data` and supports `page` (offset mode).
 - ℹ️ Also supports cursor pagination (`nextCursor`, `hasMore`).
+- ✅ Dashboard summary endpoint implemented: `GET /api/v1/dashboard/summary`.
 
 ### Step 6 — CSV import
 - ✅ Multipart CSV upload implemented.
